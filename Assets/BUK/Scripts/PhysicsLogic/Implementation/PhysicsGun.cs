@@ -9,21 +9,21 @@ namespace Buk.PhysicsLogic.Implementation
   {
     public GameObject bulletType;
     public InputAction trigger;
-    public bool inputEnabled;
     // How fast the bullet is launched
-    public float maxMuzzleVelocity = 10.0f;
+    public float maxMuzzleSpeed = 10.0f;
     // Seconds before you can shoot a new bullet.
     public float coolDown = .25f;
     // At what time was the last bullet shot.
-    private float lastShotTime = 0.0f;
+    protected float lastShotTime = 0.0f;
 
     private Rigidbody shooterBody;
-    public bool CanShoot { get => inputEnabled && Time.fixedTime - lastShotTime >= coolDown; }
+    public bool CanShoot { get => Time.fixedTime - lastShotTime >= coolDown; }
 
     protected virtual void TriggerPressed(InputAction.CallbackContext _)
     {
-      if (CanShoot) {
-        Shoot(maxMuzzleVelocity);
+      if (CanShoot)
+      {
+        Shoot(maxMuzzleSpeed);
       }
     }
 
@@ -48,7 +48,8 @@ namespace Buk.PhysicsLogic.Implementation
       InputSetup();
     }
 
-    public virtual void InputSetup() {
+    public virtual void InputSetup()
+    {
       if (trigger != null)
       {
         trigger.started += TriggerPressed;
@@ -64,14 +65,15 @@ namespace Buk.PhysicsLogic.Implementation
       var bulletBody = Instantiate(bulletType, transform.position, transform.rotation)
         // Get the Rigidbody of that bullet, so that we can apply physics to it.
         .GetComponentInChildren<Rigidbody>();
-        // If possible
-        if (shooterBody) {
-          // Make the bullet start moving just as fast as the shooter.
-          // This makes the behaviour more realistic
-          bulletBody.velocity = shooterBody.velocity;
-        }
-        // Apply velocity to the bullet's body, relative to its current position and rotation
-        bulletBody.AddRelativeForce(0f, velocity, 0f, ForceMode.VelocityChange);
+      // If possible
+      if (shooterBody)
+      {
+        // Make the bullet start moving just as fast as the shooter.
+        // This makes the behaviour more realistic
+        bulletBody.velocity = shooterBody.velocity;
+      }
+      // Apply velocity to the bullet's body, relative to its current position and rotation
+      bulletBody.AddRelativeForce(0f, velocity, 0f, ForceMode.VelocityChange);
     }
 
     public void OnDestroy()

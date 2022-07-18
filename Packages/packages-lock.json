@@ -8,10 +8,10 @@
         "com.unity.xr.management": "3.2.9",
         "com.unity.xr.legacyinputhelpers": "2.1.4"
       },
-      "hash": "9442fcc8fbd7384d27fdedb17cf64e9453c77998"
+      "hash": "788d3af9723a2da72f9adff6838005fcdb62463b"
     },
     "com.unity.burst": {
-      "version": "1.7.1",
+      "version": "1.7.3",
       "depth": 1,
       "source": "registry",
       "dependencies": {

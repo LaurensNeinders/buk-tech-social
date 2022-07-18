@@ -2,15 +2,15 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Buk.PhysicsLogic.Implementation
+namespace Buk.PhysicsLogic.Implementation.Multiplayer
 {
-  public class ChargeablePhysicsGun : PhysicsGun
+  public class MultiplayerChargeablePhysicsGun : MultiplayerPhysicsGun
   {
-    // If you shoot, the bullet will at least go this fast
+    // This is the minimum power of the gun, when you don't hold down the trigger any time at all.
     public float minMuzzleSpeed = 1.0f;
-    // This is the time it takes to charge the gun to full power.
+    // This is how many seconds it takes to charge the gun to maximum power.
     public float maxChargeTime = 1.0f;
-    // Used to save the time the player pressed the trigger.
+    // Used to save the moment when the player started holding down the trigger.
     private float triggerTime = float.PositiveInfinity;
 
     protected override void TriggerPressed(InputAction.CallbackContext _)
@@ -36,13 +36,10 @@ namespace Buk.PhysicsLogic.Implementation
       var chargeMultiplier = chargeTime / maxChargeTime;
       // Now map this linearly the number from zero to one becomes a number from minMuzzleSpeed to maxMuzzleSpeed.
       var speed = chargeMultiplier * (maxMuzzleSpeed - minMuzzleSpeed) + minMuzzleSpeed;
-      if (CanShoot)
-      {
-        // Shoot using the calculated speed.
-        Shoot(speed);
-        // Set triggerTime to the end of eternity. It will be set correctly next time the trigger is pressed.
-        triggerTime = float.PositiveInfinity;
-      }
+      // Shoot using the calculated speed.
+      Shoot(speed);
+      // Set triggerTime to the end of eternity. It will be set correctly next time the trigger is pressed.
+      triggerTime = float.PositiveInfinity;
     }
   }
 }

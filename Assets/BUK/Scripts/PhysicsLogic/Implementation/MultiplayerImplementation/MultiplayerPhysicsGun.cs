@@ -4,45 +4,73 @@ using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Buk.Multiplayer
+namespace Buk.PhysicsLogic.Implementation.Multiplayer
 {
-  public class MultiplayerGunController : NetworkBehaviour
+  public class MultiplayerPhysicsGun : NetworkBehaviour, IGun
   {
-    public GameObject gunObject;
+    // The type of bullet this gun shoots.
+    public GameObject bulletType;
+    // The button to use as input.
     public InputAction trigger;
+    // How fast the bullet is launched
+    public float maxMuzzleSpeed = 10.0f;
+    // Seconds before you can shoot a new bullet.
+    public float coolDown = .25f;
+    // At what time was the last bullet shot.
+    protected float lastShotTime = 0.0f;
 
-    /// <summary>
-    /// The code that should run immediately after this object is loaded
-    /// </summary>
+    private Rigidbody shooterBody;
+    public bool CanShoot { get => Time.fixedTime - lastShotTime >= coolDown; }
+
+    protected virtual void TriggerPressed(InputAction.CallbackContext _)
+    {
+      if (CanShoot)
+      {
+        Shoot(maxMuzzleSpeed);
+      }
+    }
+
+    protected virtual void TriggerReleased(InputAction.CallbackContext _)
+    {
+      // Do nothing
+    }
+
     public void Awake()
     {
-      // If the gunObject is not set or it does not have an IGun, then give feedback by way of an exception
-      if (gunObject == null || gunObject.GetComponent<IGun>() == null)
+
+      if (bulletType == null)
       {
-        throw new Exception("The multiplayer gun script requires a Gun Object with an IGun component");
+        throw new Exception("You must add a bullet type!");
       }
 
+      if (bulletType.GetComponentInChildren<Rigidbody>() == null)
+      {
+        throw new Exception("Your bullet must have a Rigidbody to use it with this gun!");
+      }
+      shooterBody = GetComponentInParent<Rigidbody>();
+      InputSetup();
+    }
+
+    public virtual void InputSetup()
+    {
       if (trigger != null)
       {
-        // Add a callback to the trigger input and enable the input action
-        trigger.performed += TriggerPressed;
+        trigger.started += TriggerPressed;
+        trigger.canceled += TriggerReleased;
         trigger.Enable();
       }
     }
 
-    /// <summary>
-    /// When this object is destroyed, stop listening to inputs
-    /// </summary>
     public void OnDestroy()
     {
       if (trigger != null)
       {
-        trigger.performed -= TriggerPressed;
-        trigger.Disable();
+        trigger.started -= TriggerPressed;
+        trigger.canceled -= TriggerReleased;
       }
     }
 
-    // This is what the server communication looks like for this controller
+    // This is what the server communication looks like for this implementation
     // This communication is done with Remote Actions, read more here
     // https://mirror-networking.gitbook.io/docs/guides/communications/remote-actions
     /*
@@ -54,7 +82,7 @@ namespace Buk.Multiplayer
             │  │   │ └───────┬┘ └────────┘ │
             │  │   └─────────┼─────────────┘
             │  │             │
-    RpcShoot│  │CmdShoot     └──────────┐RpcShoot
+    RpcShoot│  │Shoot        └──────────┐RpcShoot
             │  │                        │
      ┌──────┼──┼─────────────┐   ┌──────┼────────────────┐
      │Client│1 │             │   │Client|2               │
@@ -70,12 +98,12 @@ namespace Buk.Multiplayer
     /// The server can tell all instances of this player to all fire a bullet
     /// </summary>
     [Command]
-    public void CmdShoot()
+    public void Shoot(float speed)
     {
       if (!isServer) return;
 
       // Call the function to tell all instances of this player to shoot a bullet
-      RpcShoot();
+      RpcShoot(speed);
     }
 
     /// <summary>
@@ -83,28 +111,22 @@ namespace Buk.Multiplayer
     /// This is the code that actually spawns and fires the bullet for that player on every other player's, and its own, screen
     /// </summary>
     [ClientRpc]
-    public void RpcShoot()
+    public void RpcShoot(float speed)
     {
-      if (gunObject == null) return;
-
-      // Get the gun component from the gunObject
-      var gun = gunObject.GetComponent<IGun>();
-
-      // If the gun component exits, shoot a bullet from the gun
-      if (gun != null)
-        // TODO: Fix velocity
-        gun.Shoot(5.0f);
-    }
-
-    /// <summary>
-    /// This function gets called when a local player presses the shoot input.
-    /// This should only get called by the local player if this script is properly disabled on remote players.
-    /// </summary>
-    private void TriggerPressed(InputAction.CallbackContext _)
-    {
-      if (isLocalPlayer)
-        // Tell the server that we are shooting a gun
-        CmdShoot();
+      lastShotTime = Time.fixedTime;
+      // Create a new copy of bulletType using the gun's position and rotation.
+      var bulletBody = Instantiate(bulletType, transform.position, transform.rotation)
+        // Get the Rigidbody of that bullet, so that we can apply physics to it.
+        .GetComponentInChildren<Rigidbody>();
+      // If possible
+      if (shooterBody)
+      {
+        // Make the bullet start moving just as fast as the shooter.
+        // This makes the behaviour more realistic
+        bulletBody.velocity = shooterBody.velocity;
+      }
+      // Apply speed to the bullet's body, relative to its current position and rotation
+      bulletBody.AddRelativeForce(0f, speed, 0f, ForceMode.VelocityChange);
     }
   }
 }
